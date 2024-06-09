@@ -4,6 +4,13 @@ import json
 Key_JsonFile = "Database.json"
 Key_JsonArray = "Assets"
 
+Key_Column1 = "Name"
+Key_Column2 = "Location"
+Key_Column3 = "Type"
+Key_Column4 = "URL"
+
+SupportedTypes = [ "Mega" ]
+
 class ETools:
 
     ConfigFolder = None
