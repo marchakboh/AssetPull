@@ -1,5 +1,9 @@
 import sys
 import subprocess
+import ETools
+from PySide6.QtCore import Qt
+from EditWindow import EditDialog
+from CommandControll import CommandControll
 from PySide6.QtWidgets import (
     QApplication, 
     QWidget, 
@@ -16,78 +20,84 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QTextEdit
 )
-from PySide6.QtCore import Qt
-from EditWindow import EditDialog
-import ETools
 
 class MainWindow(QWidget):
+
     def __init__(self):
         super().__init__()
         
         self.setWindowTitle("External Assets")
         self.resize(600, 400)
 
+        self.setup_ui()
+        self.setup_callbacks()
+        self.fill_table_from_file()
+
+        self.controll = CommandControll()
+    
+    def setup_ui(self):
+        
         main_layout = QVBoxLayout()
 
+        # table
         self.table = QTableWidget()
         self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["", ETools.Key_Column1, ETools.Key_Column2, ETools.Key_Column3, ETools.Key_Column4])
+        self.table.setHorizontalHeaderLabels(["", ETools.Key_ColumnName, ETools.Key_ColumnLocation, ETools.Key_ColumnType, ETools.Key_ColumnURL])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        
-        db_data = ETools.ETools.load_json()
-        if db_data is not None:
-            for array_item in db_data:
-                name        = array_item[ETools.Key_Column1]
-                location    = array_item[ETools.Key_Column2]
-                type_       = array_item[ETools.Key_Column3]
-                url         = array_item[ETools.Key_Column4]
-
-                self.add_table_item(False, name, location, type_, url)
-
-
-        self.table.cellDoubleClicked.connect(self.open_edit_dialog)
-
         main_layout.addWidget(self.table)
 
-        button_layout = QHBoxLayout()
-        
-        select_all_button = QPushButton("Select All")
-        none_button = QPushButton("None")
-        delete_button = QPushButton("Delete")
-        add_button = QPushButton("Add")
-        run_button = QPushButton("Run")
+        # buttons
+        button_layout           = QHBoxLayout()
+        self.select_all_button  = QPushButton("Select All")
+        self.none_button        = QPushButton("None")
+        self.delete_button      = QPushButton("Delete")
+        self.add_button         = QPushButton("Add")
+        self.run_button         = QPushButton("Run")
 
-        add_button.clicked.connect(self.add_new_row)
-        delete_button.clicked.connect(self.delete_selected_row)
-        select_all_button.clicked.connect(self.select_all)
-        none_button.clicked.connect(self.deselect_all)
-        run_button.clicked.connect(self.run_processes)
-        
-        button_layout.addWidget(select_all_button)
-        button_layout.addWidget(none_button)
+        button_layout.addWidget(self.select_all_button)
+        button_layout.addWidget(self.none_button)
         button_layout.addSpacerItem(QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum))
-        button_layout.addWidget(delete_button)
-        button_layout.addWidget(add_button)
-        button_layout.addWidget(run_button)
+        button_layout.addWidget(self.delete_button)
+        button_layout.addWidget(self.add_button)
+        button_layout.addWidget(self.run_button)
 
         main_layout.addLayout(button_layout)
 
+        # process log
         self.console = QTextEdit()
         self.console.setReadOnly(True)
         main_layout.addWidget(self.console)
         
         self.setLayout(main_layout)
     
-    @staticmethod
-    def show_window():
-        app = QApplication(sys.argv)
-        window = MainWindow()
-        window.show()
-        sys.exit(app.exec())
+    def setup_callbacks(self):
+        # table
+        self.table.cellDoubleClicked.connect(self.open_edit_dialog)
+        
+        #buttons
+        self.add_button.clicked.connect(self.add_new_row)
+        self.delete_button.clicked.connect(self.delete_selected_row)
+        self.select_all_button.clicked.connect(self.select_all)
+        self.none_button.clicked.connect(self.deselect_all)
+        self.run_button.clicked.connect(self.on_run_tool)
+    
+    def fill_table_from_file(self):
+        # clear rows
+        self.table.setRowCount(0)
+
+        db_data = ETools.ETools.load_json()
+        if db_data is not None:
+            for array_item in db_data:
+                name        = array_item[ETools.Key_ColumnName]
+                location    = array_item[ETools.Key_ColumnLocation]
+                type_       = array_item[ETools.Key_ColumnType]
+                url         = array_item[ETools.Key_ColumnURL]
+
+                self.add_table_item(False, name, location, type_, url)
 
     def add_table_item(self, status, name, location, type_, url):
         checkbox = QCheckBox()
@@ -147,28 +157,33 @@ class MainWindow(QWidget):
         data = []
         for row in range(self.table.rowCount()):
             item_data = {
-                ETools.Key_Column1: self.table.item(row, 1).text(),
-                ETools.Key_Column2: self.table.item(row, 2).text(),
-                ETools.Key_Column3: self.table.item(row, 3).text(),
-                ETools.Key_Column4: self.table.item(row, 4).text()
+                ETools.Key_ColumnName:      self.table.item(row, 1).text(),
+                ETools.Key_ColumnLocation:  self.table.item(row, 2).text(),
+                ETools.Key_ColumnType:      self.table.item(row, 3).text(),
+                ETools.Key_ColumnURL:       self.table.item(row, 4).text()
             }
             data.append(item_data)
         
         ETools.ETools.save_json(data)
     
-    def run_processes(self):
-        db_data = ETools.ETools.load_json()
-
-        for item_data in db_data:
-            file_url = item_data[ETools.Key_Column4]
-            command = ["C:/Users/admin/Documents/GitHub/ExternalsTool/Tools/megatools/megatools.exe", "dl", "--path", ETools.ETools.ConfigFolder, file_url]
-
-            process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-            )
-
-            for line in process.stdout:
-                self.console.append(line.strip())
-                QApplication.processEvents()
-
-            process.wait()
+    def on_run_tool(self):
+        array_data = []
+        for row in range(self.table.rowCount()):
+            checkbox = self.table.cellWidget(row, 0).layout().itemAt(0).widget()
+            if checkbox.isChecked():
+                item_data = {
+                    ETools.Key_ColumnName:      self.table.item(row, 1).text(),
+                    ETools.Key_ColumnLocation:  self.table.item(row, 2).text(),
+                    ETools.Key_ColumnType:      self.table.item(row, 3).text(),
+                    ETools.Key_ColumnURL:       self.table.item(row, 4).text()
+                }
+                array_data.append(item_data)
+        print(array_data)
+        self.controll.run_process(array_data)
+    
+    @staticmethod
+    def show_window():
+        app = QApplication(sys.argv)
+        window = MainWindow()
+        window.show()
+        sys.exit(app.exec())

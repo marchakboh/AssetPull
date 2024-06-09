@@ -18,15 +18,18 @@ class EditDialog(QDialog):
         self.name_input = QLineEdit(name)
         self.location_input = QLineEdit(location)
         self.type_input = QComboBox()
-        self.type_input.addItems(ETools.SupportedTypes)
+        sup_types = []
+        for stype in ETools.SupportedTypes:
+            sup_types.append(stype.name)
+        self.type_input.addItems(sup_types)
         self.type_input.setCurrentText(type_)
         self.url_input = QLineEdit(url)
 
         form_layout = QFormLayout()
-        form_layout.addRow(ETools.Key_Column1, self.name_input)
-        form_layout.addRow(ETools.Key_Column2, self.location_input)
-        form_layout.addRow(ETools.Key_Column3, self.type_input)
-        form_layout.addRow(ETools.Key_Column4, self.url_input)
+        form_layout.addRow(ETools.Key_ColumnName, self.name_input)
+        form_layout.addRow(ETools.Key_ColumnLocation, self.location_input)
+        form_layout.addRow(ETools.Key_ColumnType, self.type_input)
+        form_layout.addRow(ETools.Key_ColumnURL, self.url_input)
 
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         self.button_box.accepted.connect(self.accept)
