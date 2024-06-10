@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 from enum import Enum
 
@@ -71,7 +72,7 @@ class ETools:
     @staticmethod
     def construct_download_command(provider_type, url):
         if provider_type == SupportedTypes.Mega.name:
-            return [f"{os.path.dirname(os.path.abspath(__file__))}\\..\\Tools\\megatools\\megatools.exe", "dl", "--path", ETools.get_temp_folder(), url]
+            return [ETools.get_megatool_path(), "dl", "--path", ETools.get_temp_folder(), url]
         else:
             return []
 
@@ -92,3 +93,15 @@ class ETools:
             return command
         unzip_command = [new_value if x == old_value else x for x in command]
         return unzip_command
+    
+    @staticmethod
+    def get_execution_path():
+        if getattr(sys, 'frozen', False):
+            return os.path.dirname(sys.executable)
+        else:
+            return os.path.dirname(os.path.abspath(__file__))
+    
+    @staticmethod
+    def get_megatool_path():
+        execution_path = ETools.get_execution_path()
+        return execution_path + "\\..\\Tools\\megatools\\megatools.exe"
